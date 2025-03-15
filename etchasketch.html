@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Etch A Sketch Game</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -13,11 +14,17 @@
       margin: 0;
       background-color: #f0f0f0;
     }
+    #container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
     #gameArea {
       position: relative;
       width: 400px;
       height: 400px;
       border: 2px solid #000;
+      overflow: hidden;
     }
     canvas {
       position: absolute;
@@ -25,97 +32,152 @@
       left: 0;
       background-color: white;
     }
-    #shakeUpBtn {
-      margin-top: 20px;
+    #controls {
+      display: flex;
+      flex-direction: column;
+      margin-left: 20px;
+    }
+    #shakeUpBtn, #colorPicker {
+      margin-bottom: 10px;
       padding: 10px 20px;
       font-size: 16px;
       cursor: pointer;
     }
+    #colorPicker {
+      width: 100px;
+      height: 30px;
+    }
   </style>
 </head>
 <body>
-  <div id="gameArea">
-    <canvas id="etchCanvas" width="400" height="400"></canvas>
+  <div id="container">
+    <div id="gameArea">
+      <canvas id="etchCanvas" width="400" height="400"></canvas>
+    </div>
+    <div id="controls">
+      <button id="shakeUpBtn">Shake Up!</button>
+      <input type="color" id="colorPicker" value="#FF0000">
+    </div>
   </div>
-  <button id="shakeUpBtn">Shake Up!</button>
 
   <script>
     const canvas = document.getElementById('etchCanvas');
     const ctx = canvas.getContext('2d');
     const shakeUpBtn = document.getElementById('shakeUpBtn');
+    const colorPicker = document.getElementById('colorPicker');
+    const gameArea = document.getElementById('gameArea'); // The box containing the canvas
 
+    // Initial position for the dot (center of the canvas)
     let pos = { x: canvas.width / 2, y: canvas.height / 2 };
 
+    // Store the path of the dot to make sure the trail is continuous
     let path = [{ x: pos.x, y: pos.y }];
 
+    // Default color for the ball and path
+    let currentColor = '#FF0000'; // Red
+
+    // Smaller movement amount (1 pixel)
     const movementAmount = 1;
 
-    
+    // Function to draw the path of the dot
     const drawPath = () => {
-
+      // Draw the dot's path with the selected color
       ctx.beginPath();
       ctx.moveTo(path[0].x, path[0].y);
       for (let i = 1; i < path.length; i++) {
         ctx.lineTo(path[i].x, path[i].y);
       }
-      ctx.strokeStyle = 'red';
+      ctx.strokeStyle = currentColor;
       ctx.lineWidth = 2;
       ctx.stroke();
     };
 
+    // Function to move the dot vertically (WASD keys control vertical movement)
     const moveVertical = (direction) => {
-      if (direction === 'w' && pos.y > 0) pos.y -= movementAmount; 
-      if (direction === 's' && pos.y < canvas.height) pos.y += movementAmount; 
+      if (direction === 'w' && pos.y > 0) pos.y -= movementAmount; // Up
+      if (direction === 's' && pos.y < canvas.height) pos.y += movementAmount; // Down
 
-      path.push({ x: pos.x, y: pos.y }); 
+      path.push({ x: pos.x, y: pos.y }); // Add to the path
     };
 
+    // Function to move the dot horizontally (Arrow keys control horizontal movement)
     const moveHorizontal = (direction) => {
-      if (direction === 'ArrowLeft' && pos.x > 0) pos.x -= movementAmount; 
-      if (direction === 'ArrowRight' && pos.x < canvas.width) pos.x += movementAmount;
+      if (direction === 'ArrowLeft' && pos.x > 0) pos.x -= movementAmount; // Left
+      if (direction === 'ArrowRight' && pos.x < canvas.width) pos.x += movementAmount; // Right
 
-      path.push({ x: pos.x, y: pos.y }); 
+      path.push({ x: pos.x, y: pos.y }); // Add to the path
     };
 
+    // Handle keyboard events
     document.addEventListener('keydown', (e) => {
+      // Vertical movement control (WASD keys)
       if (e.key === 'w' || e.key === 's') {
         moveVertical(e.key);
       }
 
+      // Horizontal movement control (Arrow keys)
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         moveHorizontal(e.key);
       }
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height); 
+      // Clear canvas and draw the path with the dot's current position and selected color
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawPath(); 
-
+      // Draw the current position of the dot with the current color
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, 5, 0, 2 * Math.PI);
-      ctx.fillStyle = 'red';
+      ctx.fillStyle = currentColor;
       ctx.fill();
     });
 
-   
+    // Shake effect function (now shakes the entire box, not just the canvas)
+    const shakeScreen = () => {
+      const shakeMagnitude = 10; // Magnitude of the shake (in pixels)
+      let shakeCount = 0;
+      const shakeInterval = setInterval(() => {
+        const offsetX = (Math.random() * 2 - 1) * shakeMagnitude;
+        const offsetY = (Math.random() * 2 - 1) * shakeMagnitude;
+        gameArea.style.transform = `translate(${offsetX}px, ${offsetY}px)`; // Shake the whole box
+
+        shakeCount++;
+
+        if (shakeCount >= 6) { // Shake for 100ms (roughly 6 intervals)
+          clearInterval(shakeInterval);
+          // Reset the position of the box
+          gameArea.style.transform = 'translate(0, 0)';
+        }
+      }, 16); // 16ms interval (~60 FPS)
+    };
+
+    // Shake Up button to reset the drawing
     shakeUpBtn.addEventListener('click', () => {
-    
+      // Reset dot position
       pos = { x: canvas.width / 2, y: canvas.height / 2 };
 
-   
+      // Clear the canvas and reset path
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       path = [{ x: pos.x, y: pos.y }];
       drawPath();
-
+      // Draw the initial dot at the reset position
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, 5, 0, 2 * Math.PI);
-      ctx.fillStyle = 'red';
+      ctx.fillStyle = currentColor;
       ctx.fill();
+
+      // Trigger screen shake effect (shakes the whole box now)
+      shakeScreen();
     });
 
+    // Update the current color based on the color picker
+    colorPicker.addEventListener('input', (e) => {
+      currentColor = e.target.value;
+    });
 
+    // Initialize the drawing
     drawPath();
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, 5, 0, 2 * Math.PI);
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = currentColor;
     ctx.fill();
 
   </script>
